@@ -9,8 +9,8 @@ on:
 
 env:
   AWS_REGION: ap-south-1
-  AUTH_REPOSITORY: pdw-lab-ecr-auth-microservicesinfra
-  PRODUCT_REPOSITORY: pdw-lab-ecr-product-microservicesinfra
+  AUTH_REPOSITORY: pdw-ecr-sandbox-auth-microservicesinfra
+  PRODUCT_REPOSITORY: pdw-ecr-sandbox-product-microservicesinfra
 
 
 
