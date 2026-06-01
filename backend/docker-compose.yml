@@ -1,0 +1,18 @@
+name: micro-services-project-infra-backend
+
+
+services:
+  authservice:
+    build: ./auth
+    ports:
+      - "3001:3001"
+    environment:
+      - AUTHAPP_PORT=3001
+
+  productservice:
+    build: ./product
+    ports:
+      - "3002:3002"
+    environment:
+      - PRODUCTAPP_PORT=3002
+      - AUTHAPP_URL=http://authservice:3001
