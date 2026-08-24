@@ -67,6 +67,22 @@ Logging guidance:
 - Include resource names, object keys, and operation context in messages where useful.
 - Raise exceptions when a build or deployment cannot complete; logging an error must not replace correct error handling.
 
+## Python Package Imports
+
+- When a directory is a Python package, expose its public modules or symbols through that package's `__init__.py`.
+- Consumers should import public functionality from the package, for example `from utils.services import S3Manager`, instead of importing directly from `utils.services.s3_manager`.
+- Define an explicit `__all__` in each package `__init__.py` containing the names that package consumers are allowed to import.
+- Keep `__all__` synchronized with the imports in `__init__.py`; do not leave stale or unrelated names in it.
+
+Example:
+
+```python
+# utils/services/__init__.py
+from .s3_manager import S3Manager
+
+__all__ = ["S3Manager"]
+```
+
 ## Infrastructure Build And Deployment
 
 - The configured artifact bucket is `PDW_S3_BUCKET_SANDBOX_PROJECT_PARTIALS` in `utils/constants.py`.
@@ -112,5 +128,11 @@ When adding files, update this structure section if the new directory or module 
 
 - Read nearby code before editing and preserve existing public APIs unless a change requires otherwise.
 - Prefer standard library and existing dependencies before introducing new packages.
+- Follow PEP 8 style and use Ruff for linting, import sorting, and formatting.
+- Run `uv run ruff check .` and `uv run ruff format --check .` before completing Python changes.
+- Use descriptive names, small focused functions, and type annotations for public APIs.
+- Avoid mutable default arguments, broad exception handling, duplicated logic, and unnecessary global state.
+- Keep functions deterministic where practical and inject external clients so AWS behavior can be tested with Moto.
+- Write focused tests for new behavior, including success and failure paths for infrastructure operations.
 - Validate Python changes with compilation, diagnostics, and focused tests or smoke tests.
 - Keep generated artifacts, credentials, and `.env` files out of version control.

@@ -1,8 +1,6 @@
 import logging
 import os
 import sys
-from typing import Optional
-
 
 SUCCESS_LEVEL = 25
 _LEVELS = {
@@ -48,7 +46,7 @@ class ColoredFormatter(logging.Formatter):
 logging.addLevelName(SUCCESS_LEVEL, "SUCCESS")
 
 
-def configure_logging(level: Optional[str] = None) -> int:
+def configure_logging(level: str | None = None) -> int:
 	"""Configure application logging from an explicit value or LOG_LEVEL."""
 	configured_level = (level or os.getenv("LOG_LEVEL", "INFO")).upper()
 	log_level = _LEVELS.get(configured_level, logging.INFO)

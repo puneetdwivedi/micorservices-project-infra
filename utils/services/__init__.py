@@ -1,9 +1,8 @@
-from .cft import CloudFormationStack
+from .cft import CloudFormationClient, CloudFormationStack
+from .s3_manager import S3Manager
 
 __all__ = [
-    "User",
-    "create_user",
-    "Auth",
-    "login",
-    "Database",
+	"CloudFormationClient",
+	"CloudFormationStack",
+	"S3Manager",
 ]

@@ -1,7 +1,7 @@
 import pytest
 from moto import mock_aws
 
-from utils.services.s3_manager import S3Manager
+from utils.services import S3Manager
 
 
 @pytest.fixture
