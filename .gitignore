@@ -3,5 +3,9 @@
 **/build
 **/coverage
 **/logs
+**/.log
+**/.env
+
+
 
 plan.md
