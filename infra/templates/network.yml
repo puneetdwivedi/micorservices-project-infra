@@ -138,7 +138,7 @@ Resources:
       GatewayId: !Ref InternetGateWay # TODO: During dev using igw as nat is chargable
       # NatGatewayId: !Ref NATGateway
 
-    # ------------------------------------ #
+  # ------------------------------------ #
   # Route Tables Subnet Attachment       #
   # ------------------------------------ #
 
