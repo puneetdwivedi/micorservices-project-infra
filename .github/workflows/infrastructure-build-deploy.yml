@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "infra/**"
-      - "scripts/**"
-      - "src/**"
-      - "utils/**"
-      - "pyproject.toml"
-      - "uv.lock"
   workflow_dispatch:
     inputs:
       operation:
