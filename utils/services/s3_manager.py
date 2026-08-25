@@ -2,6 +2,7 @@ import json
 import logging
 
 import boto3
+from botocore.exceptions import ClientError
 
 from utils.logging_config import SUCCESS_LEVEL
 
@@ -109,6 +110,13 @@ class S3Manager:
 					self.s3.delete_objects(Bucket=bucket_name, Delete={"Objects": objects})
 			logger.info("Emptied S3 bucket %s", bucket_name)
 			return True
+		except ClientError as error:
+			if error.response["Error"]["Code"] in {"NoSuchBucket", "404"}:
+				logger.warning(
+					"Skipping empty for S3 bucket %s because it does not exist", bucket_name
+				)
+				return True
+			raise
 		except Exception as e:
 			logger.error("Error emptying S3 bucket %s: %s", bucket_name, e)
 			return False
@@ -119,6 +127,13 @@ class S3Manager:
 			self.s3.delete_bucket(Bucket=bucket_name)
 			logger.log(SUCCESS_LEVEL, "S3 bucket deleted successfully: %s", bucket_name)
 			return True
+		except ClientError as error:
+			if error.response["Error"]["Code"] in {"NoSuchBucket", "404"}:
+				logger.warning(
+					"Skipping delete for S3 bucket %s because it does not exist", bucket_name
+				)
+				return True
+			raise
 		except Exception as e:
 			logger.error("Error deleting S3 bucket %s: %s", bucket_name, e)
 			return False
@@ -148,6 +163,29 @@ class S3Manager:
 			return True
 		except Exception as e:
 			logger.error("Error adding bucket policy to %s: %s", bucket_name, e)
+
+	def add_cloudformation_read_policy(self, bucket_name, object_prefix):
+		"""Allow CloudFormation to read templates under an S3 prefix."""
+		bucket_policy = {
+			"Version": "2012-10-17",
+			"Statement": [
+				{
+					"Sid": "AllowCloudFormationReadTemplates",
+					"Effect": "Allow",
+					"Principal": {"Service": "cloudformation.amazonaws.com"},
+					"Action": "s3:GetObject",
+					"Resource": f"arn:aws:s3:::{bucket_name}/{object_prefix.strip('/')}/*",
+				}
+			],
+		}
+
+		try:
+			self.s3.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(bucket_policy))
+			logger.info("Granted CloudFormation read access to %s", object_prefix)
+			return True
+		except Exception as e:
+			logger.error("Error adding CloudFormation policy to %s: %s", bucket_name, e)
+			return False
 
 	def disable_public_access_block(self, bucket_name):
 		try:

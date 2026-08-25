@@ -1,6 +1,7 @@
 import logging
 
 import boto3
+from botocore.exceptions import ClientError
 
 from utils.constants import AWS_DEFAULT_REGION
 from utils.logging_config import SUCCESS_LEVEL
@@ -51,11 +52,14 @@ class CloudFormationStack:
 		logger.debug("Stack update response for %s: %s", self.stack_name, response)
 		return response
 
-	def deploy(self):
+	def deploy(self, waiter_delay=30):
 		"""Deploys the stack by first checking if it exists and either creates or updates"""
 		try:
 			logger.info("Initiating deployment of stack %s", self.stack_name)
 			self.__create_stack()
+			self.cf_client.get_waiter("stack_create_complete").wait(
+				StackName=self.stack_name, WaiterConfig={"Delay": waiter_delay}
+			)
 			logger.log(SUCCESS_LEVEL, "Stack created successfully: %s", self.stack_name)
 
 		except Exception as e:
@@ -65,18 +69,31 @@ class CloudFormationStack:
 					# update the stack
 					logger.info("Updating stack: %s", self.stack_name)
 					self.__update_stack()
+					self.cf_client.get_waiter("stack_update_complete").wait(
+						StackName=self.stack_name, WaiterConfig={"Delay": waiter_delay}
+					)
 					logger.log(SUCCESS_LEVEL, "Stack updated successfully: %s", self.stack_name)
 				except Exception as update_err:
 					if "No updates are to be performed" in str(update_err):
 						logger.info("No updates are required for stack: %s", self.stack_name)
 					else:
 						logger.error("Error updating stack %s: %s", self.stack_name, update_err)
+						raise
 			else:
 				logger.error("Error creating stack %s: %s", self.stack_name, e)
+				raise
 
 	def delete(self):
 		"""Delete the stack and wait until CloudFormation confirms its removal."""
 		logger.info("Deleting stack %s", self.stack_name)
-		self.cf_client.delete_stack(StackName=self.stack_name)
+		try:
+			self.cf_client.delete_stack(StackName=self.stack_name)
+		except ClientError as error:
+			if error.response["Error"]["Code"] == "ValidationError" and "does not exist" in str(
+				error
+			):
+				logger.warning("Skipping stack %s because it does not exist", self.stack_name)
+				return
+			raise
 		self.cf_client.get_waiter("stack_delete_complete").wait(StackName=self.stack_name)
 		logger.log(SUCCESS_LEVEL, "Stack deleted successfully: %s", self.stack_name)

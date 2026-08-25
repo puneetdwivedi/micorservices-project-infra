@@ -1,0 +1,5 @@
+{
+  "pdw-stack-infra": {
+    "ProjectPartialsS3BucketName": "{{PDW_S3_BUCKET_SANDBOX_PROJECT_PARTIALS}}"
+  }
+}

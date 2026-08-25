@@ -1,0 +1,14 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 3 tier production grade application infra
+
+Parameters:
+  ProjectPartialsS3BucketName:
+    Type: String
+
+Resources:
+  NetworkStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://${ProjectPartialsS3BucketName}.s3.${AWS::Region}.amazonaws.com/microservices-project-infra/templates/network.yml
+        - ProjectPartialsS3BucketName: !Ref ProjectPartialsS3BucketName

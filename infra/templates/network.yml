@@ -1,0 +1,228 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Network Resource"
+
+Resources:
+  
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: pdw-vpc-core
+
+  # ------------------------------------ #
+  # Public Subnets                       #
+  # ------------------------------------ #
+
+  PublicSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: pdw-public-subnet-sandbox-1a-region
+
+  PublicSubnet1b:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: pdw-public-subnet-sandbox-1b-region
+
+  # ------------------------------------ #
+  # Private Subnets                      #
+  # ------------------------------------ #
+
+  PrivateSubnet1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: pdw-private-subnet-sandbox-1a-region
+
+  PrivateSubnet2a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.4.0/24
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      Tags:
+        - Key: Name
+          Value: pdw-private-subnet-sandbox-2a-region
+
+
+  # ------------------------------------ #
+  # Route Tables                         #
+  # ------------------------------------ #
+
+  RouteTablePublicSubnet:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: pdw-route-table-public-subnet
+
+  RouteTablePrivateSubnet:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: pdw-route-table-private-subnet
+
+
+  # ------------------------------------ #
+  # Internet Gateway                     #
+  # ------------------------------------ #
+
+  InternetGateWay:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: pdw-igw-sandbox
+
+  AttachInternetGateWay:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateWay
+      VpcId: !Ref Vpc
+
+
+  # ------------------------------------ #
+  # NAT Gateway                          #
+  # ------------------------------------ #
+  # HACK:: Creating Just 1 nat for saving some dollars
+  # TODO: Just disabling as it cost much
+  # NATGateway:
+  #   Type: AWS::EC2::NatGateway
+  #   Properties:
+  #     AllocationId: !GetAtt NATGatewayEIP.AllocationId
+  #     SubnetId: !Ref PublicSubnet1a
+  #     Tags:
+  #       - Key: stack
+  #         Value: production
+
+  # NATGatewayEIP:
+  #   Type: AWS::EC2::EIP
+  #   Properties:
+  #     Domain: vpc
+
+
+  # ------------------------------------ #
+  # Routes                               #
+  # ------------------------------------ #
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePublicSubnet
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateWay
+
+  PublicRoutePrivateSubnet:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateSubnet
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateWay # TODO: During dev using igw as nat is chargable
+      # NatGatewayId: !Ref NATGateway
+
+    # ------------------------------------ #
+  # Route Tables Subnet Attachment       #
+  # ------------------------------------ #
+
+  PublicSubnet1aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublicSubnet
+      SubnetId: !Ref PublicSubnet1a
+
+  PublicSubnet1bRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublicSubnet
+      SubnetId: !Ref PublicSubnet1b
+
+  PrivateSubnet1aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateSubnet
+      SubnetId: !Ref PrivateSubnet1a
+
+  PrivateSubnet2aRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivateSubnet
+      SubnetId: !Ref PrivateSubnet2a
+
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref Vpc
+    Export:
+      Name: pdw-VPC:VpcId
+
+  VpcCidrBlock:
+    Description: VPC CIDR block
+    Value: !GetAtt Vpc.CidrBlock
+    Export:
+      Name: pdw-VPC:VpcCidrBlock
+
+  PublicSubnet1aId:
+    Description: Public subnet 1a ID
+    Value: !Ref PublicSubnet1a
+    Export:
+      Name: pdw-Subnet:PublicSubnet1a
+
+  PublicSubnet1aCidrBlock:
+    Description: Public subnet 1a CIDR block
+    Value: !GetAtt PublicSubnet1a.CidrBlock
+    Export:
+      Name: pdw-SubnetCidr:PublicSubnet1a
+
+  PublicSubnet1bId:
+    Description: Public subnet 1b ID
+    Value: !Ref PublicSubnet1b
+    Export:
+      Name: pdw-Subnet:PublicSubnet1b
+
+  PublicSubnet1bCidrBlock:
+    Description: Public subnet 1b CIDR block
+    Value: !GetAtt PublicSubnet1b.CidrBlock
+    Export:
+      Name: pdw-SubnetCidr:PublicSubnet1b
+
+  PrivateSubnet1aId:
+    Description: Private subnet 1a ID
+    Value: !Ref PrivateSubnet1a
+    Export:
+      Name: pdw-Subnet:PrivateSubnet1a
+
+  PrivateSubnet1aCidrBlock:
+    Description: Private subnet 1a CIDR block
+    Value: !GetAtt PrivateSubnet1a.CidrBlock
+    Export:
+      Name: pdw-SubnetCidr:PrivateSubnet1a
+
+  PrivateSubnet2aId:
+    Description: Private subnet 2a ID
+    Value: !Ref PrivateSubnet2a
+    Export:
+      Name: pdw-Subnet:PrivateSubnet2a
+
+  PrivateSubnet2aCidrBlock:
+    Description: Private subnet 2a CIDR block
+    Value: !GetAtt PrivateSubnet2a.CidrBlock
+    Export:
+      Name: pdw-SubnetCidr:PrivateSubnet2a

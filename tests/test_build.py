@@ -1,3 +1,4 @@
+import json
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -38,6 +39,9 @@ def test_build_syncs_prefixed_infrastructure_and_lambda_archive(s3_manager):
 			"demo/lambdas/orders.zip",
 		]
 		assert s3_manager.s3.head_bucket(Bucket="test-bucket")
+		policy = s3_manager.s3.get_bucket_policy(Bucket="test-bucket")["Policy"]
+		assert '"cloudformation.amazonaws.com"' in policy
+		assert "arn:aws:s3:::test-bucket/demo/*" in policy
 		response = s3_manager.s3.get_object(Bucket="test-bucket", Key="demo/lambdas/orders.zip")
 		with ZipFile(BytesIO(response["Body"].read())) as archive:
 			assert archive.namelist() == ["handler.py"]
@@ -60,3 +64,20 @@ def test_build_syncs_prefixed_infrastructure_and_lambda_archive(s3_manager):
 			)
 			is None
 		)
+
+
+def test_build_configuration_renders_constants(tmp_path):
+	configuration_path = tmp_path / "infra" / "stacks" / "configuration"
+	configuration_path.mkdir(parents=True)
+	(configuration_path / "configuration.json").write_text(
+		'{"bucket": "{{PDW_S3_BUCKET_SANDBOX_PROJECT_PARTIALS}}", '
+		'"region": "{{AWS_DEFAULT_REGION}}"}'
+	)
+
+	parsed_path = Build(project_root=tmp_path).build_configuration()
+
+	assert parsed_path == configuration_path / "parsed" / "configuration.json"
+	assert json.loads(parsed_path.read_text()) == {
+		"bucket": "pdw-s3-bucket-sandbox-project-partials",
+		"region": "ap-south-1",
+	}
