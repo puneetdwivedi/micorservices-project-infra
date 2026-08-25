@@ -73,6 +73,29 @@ class S3Manager:
 		"""Synchronize one local file with an S3 object."""
 		return self.upload_file(file_path, bucket_name, object_key, extra_args)
 
+	def list_object_keys(self, bucket_name, prefix=""):
+		"""Return all object keys under a bucket prefix."""
+		try:
+			paginator = self.s3.get_paginator("list_objects_v2")
+			return [
+				item["Key"]
+				for page in paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+				for item in page.get("Contents", [])
+			]
+		except Exception as e:
+			logger.error("Error listing S3 objects under %s: %s", prefix, e)
+			return []
+
+	def delete_object(self, bucket_name, object_key):
+		"""Delete one S3 object."""
+		try:
+			self.s3.delete_object(Bucket=bucket_name, Key=object_key)
+			logger.info("Deleted S3 object %s from %s", object_key, bucket_name)
+			return True
+		except Exception as e:
+			logger.error("Error deleting S3 object %s: %s", object_key, e)
+			return False
+
 	def empty_bucket(self, bucket_name):
 		"""Delete every object version and delete marker from a bucket."""
 		try:

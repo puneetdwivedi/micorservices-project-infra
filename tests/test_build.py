@@ -15,6 +15,12 @@ def test_build_syncs_prefixed_infrastructure_and_lambda_archive(s3_manager):
 		(project_root / "infra" / "stacks" / "infra.yml").write_text("stack")
 		(project_root / "infra" / "templates" / "network.yml").write_text("network")
 		(project_root / "infra" / "lambdas" / "orders" / "handler.py").write_text("handler")
+		s3_manager.create_bucket("test-bucket")
+		s3_manager.s3.put_object(
+			Bucket="test-bucket",
+			Key="demo/lambdas/func2.zip",
+			Body=b"stale archive",
+		)
 		synced_keys = Build(
 			project_root=project_root,
 			bucket_name="test-bucket",
@@ -32,3 +38,9 @@ def test_build_syncs_prefixed_infrastructure_and_lambda_archive(s3_manager):
 		with ZipFile(BytesIO(response["Body"].read())) as archive:
 			assert archive.namelist() == ["handler.py"]
 			assert archive.read("handler.py") == b"handler"
+		assert (
+			s3_manager.s3.list_objects_v2(Bucket="test-bucket", Prefix="demo/lambdas/func2").get(
+				"Contents"
+			)
+			is None
+		)
