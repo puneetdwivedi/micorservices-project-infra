@@ -87,7 +87,7 @@ jobs:
 
   infrastructure_destroy:
     if: always() && (github.event_name == 'push' || inputs.operation == 'destroy')
-    needs: infrastructure_test
+    needs: [infrastructure_test, infrastructure_deploy]
     runs-on: ubuntu-latest
     permissions:
       contents: read
