@@ -73,3 +73,10 @@ class CloudFormationStack:
 						logger.error("Error updating stack %s: %s", self.stack_name, update_err)
 			else:
 				logger.error("Error creating stack %s: %s", self.stack_name, e)
+
+	def delete(self):
+		"""Delete the stack and wait until CloudFormation confirms its removal."""
+		logger.info("Deleting stack %s", self.stack_name)
+		self.cf_client.delete_stack(StackName=self.stack_name)
+		self.cf_client.get_waiter("stack_delete_complete").wait(StackName=self.stack_name)
+		logger.log(SUCCESS_LEVEL, "Stack deleted successfully: %s", self.stack_name)

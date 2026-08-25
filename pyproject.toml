@@ -16,6 +16,7 @@ dependencies = [
 main = "src.main:main"
 build = "src.main:main"
 deploy = "scripts.deploy:main"
+destroy = "scripts.destroy:main"
 microservices-project-infra = "src.main:main"
 
 [build-system]

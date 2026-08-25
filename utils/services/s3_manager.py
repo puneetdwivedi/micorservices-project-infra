@@ -73,6 +73,33 @@ class S3Manager:
 		"""Synchronize one local file with an S3 object."""
 		return self.upload_file(file_path, bucket_name, object_key, extra_args)
 
+	def empty_bucket(self, bucket_name):
+		"""Delete every object version and delete marker from a bucket."""
+		try:
+			paginator = self.s3.get_paginator("list_object_versions")
+			for page in paginator.paginate(Bucket=bucket_name):
+				objects = [
+					{"Key": item["Key"], "VersionId": item["VersionId"]}
+					for item in page.get("Versions", []) + page.get("DeleteMarkers", [])
+				]
+				if objects:
+					self.s3.delete_objects(Bucket=bucket_name, Delete={"Objects": objects})
+			logger.info("Emptied S3 bucket %s", bucket_name)
+			return True
+		except Exception as e:
+			logger.error("Error emptying S3 bucket %s: %s", bucket_name, e)
+			return False
+
+	def delete_bucket(self, bucket_name):
+		"""Delete an empty S3 bucket."""
+		try:
+			self.s3.delete_bucket(Bucket=bucket_name)
+			logger.log(SUCCESS_LEVEL, "S3 bucket deleted successfully: %s", bucket_name)
+			return True
+		except Exception as e:
+			logger.error("Error deleting S3 bucket %s: %s", bucket_name, e)
+			return False
+
 	def add_public_read_object_policy(self, bucket_name, object_key):
 
 		# Define the bucket policy

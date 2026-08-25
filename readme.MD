@@ -120,6 +120,22 @@ The sandbox artifact bucket is `pdw-s3-bucket-sandbox-project-partials`.
 
 S3 access is kept behind `S3Manager`, and the builder supports dependency injection for tests.
 
+### Destroy Infrastructure
+
+Run the teardown through the configured project command:
+
+```powershell
+uv run destroy
+```
+
+The destroy workflow:
+
+1. Deletes the configured CloudFormation stack and waits for deletion to complete.
+2. Removes all objects, object versions, and delete markers from the artifact bucket.
+3. Deletes the now-empty artifact bucket.
+
+This permanently removes the sandbox infrastructure and artifacts, so verify the AWS account and region before running it.
+
 ### Deployment
 
 The deployment command is available:
