@@ -1,7 +1,7 @@
 [project]
 name = "microservices-project-infra"
 version = "0.1.0"
-description = "Add your description here"
+description = "Micor services project infrastructure"
 readme = "README.md"
 authors = [
     { name = "Puneet Dwivedi", email = "pdwivedi294@gmail.com" }
