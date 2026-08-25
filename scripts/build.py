@@ -59,6 +59,7 @@ class Build:
 		"""Sync an infra directory while preserving its S3 prefix."""
 		directory = self.infra_root / directory_name
 		if not directory.exists():
+			self.remove_stale_objects(directory_name, [])
 			return []
 
 		synced_keys = []
@@ -67,16 +68,17 @@ class Build:
 			if not self.s3_manager.sync_file(str(file_path), self.bucket_name, object_key):
 				raise RuntimeError(f"Unable to sync {file_path}")
 			synced_keys.append(object_key)
+		self.remove_stale_objects(directory_name, synced_keys)
 		return synced_keys
 
-	def remove_stale_lambda_archives(self, synced_keys):
-		"""Delete Lambda archives that no longer have a local source directory."""
-		lambda_prefix = self._project_key(Path("lambdas")) + "/"
+	def remove_stale_objects(self, directory_name, synced_keys):
+		"""Delete objects under a managed infra prefix that are absent locally."""
+		prefix = self._project_key(Path(directory_name)) + "/"
 		current_keys = set(synced_keys)
 		stale_keys = [
 			key
-			for key in self.s3_manager.list_object_keys(self.bucket_name, lambda_prefix)
-			if key.endswith(".zip") and key not in current_keys
+			for key in self.s3_manager.list_object_keys(self.bucket_name, prefix)
+			if key not in current_keys
 		]
 		for object_key in stale_keys:
 			if not self.s3_manager.delete_object(self.bucket_name, object_key):
@@ -86,7 +88,7 @@ class Build:
 		"""Zip each Lambda directory and sync it as ``lambdas/<name>.zip``."""
 		lambdas_directory = self.infra_root / "lambdas"
 		if not lambdas_directory.exists():
-			self.remove_stale_lambda_archives([])
+			self.remove_stale_objects("lambdas", [])
 			return []
 
 		synced_keys = []
@@ -113,7 +115,7 @@ class Build:
 				if not self.s3_manager.sync_file(str(archive_path), self.bucket_name, object_key):
 					raise RuntimeError(f"Unable to sync {archive_path}")
 				synced_keys.append(object_key)
-		self.remove_stale_lambda_archives(synced_keys)
+		self.remove_stale_objects("lambdas", synced_keys)
 		return synced_keys
 
 	def _project_key(self, path: Path) -> str:

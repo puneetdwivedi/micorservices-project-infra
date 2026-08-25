@@ -21,6 +21,10 @@ def test_build_syncs_prefixed_infrastructure_and_lambda_archive(s3_manager):
 			Key="demo/lambdas/func2.zip",
 			Body=b"stale archive",
 		)
+		s3_manager.s3.put_object(Bucket="test-bucket", Key="demo/stacks/old.yml", Body=b"old stack")
+		s3_manager.s3.put_object(
+			Bucket="test-bucket", Key="demo/templates/old.yml", Body=b"old template"
+		)
 		synced_keys = Build(
 			project_root=project_root,
 			bucket_name="test-bucket",
@@ -40,6 +44,18 @@ def test_build_syncs_prefixed_infrastructure_and_lambda_archive(s3_manager):
 			assert archive.read("handler.py") == b"handler"
 		assert (
 			s3_manager.s3.list_objects_v2(Bucket="test-bucket", Prefix="demo/lambdas/func2").get(
+				"Contents"
+			)
+			is None
+		)
+		assert (
+			s3_manager.s3.list_objects_v2(Bucket="test-bucket", Prefix="demo/stacks/old").get(
+				"Contents"
+			)
+			is None
+		)
+		assert (
+			s3_manager.s3.list_objects_v2(Bucket="test-bucket", Prefix="demo/templates/old").get(
 				"Contents"
 			)
 			is None
