@@ -6,6 +6,16 @@ on:
       - main
     paths:
       - 'backend/**'
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Select the backend operation
+        required: true
+        default: publish
+        type: choice
+        options:
+          - publish
+          - destroy
 
 env:
   AWS_REGION: ap-south-1
@@ -16,6 +26,7 @@ env:
 
 jobs:
   backend_docker_publish:
+    if: github.event_name == 'push' || inputs.operation == 'publish'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,3 +85,53 @@ jobs:
 
           docker push \
             $ECR_REGISTRY/$PRODUCT_REPOSITORY:$IMAGE_TAG
+
+  backend_ecr_destroy:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'destroy'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESSKEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRETKEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Delete Auth ECR repository
+        shell: bash
+        run: |
+          set +e
+          output=$(aws ecr delete-repository \
+            --repository-name "$AUTH_REPOSITORY" \
+            --force 2>&1)
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "$output"
+          elif [[ "$output" == *"RepositoryNotFoundException"* ]]; then
+            echo "Warning: ECR repository $AUTH_REPOSITORY does not exist; skipping"
+          else
+            echo "$output" >&2
+            exit "$status"
+          fi
+
+      - name: Delete Product ECR repository
+        shell: bash
+        run: |
+          set +e
+          output=$(aws ecr delete-repository \
+            --repository-name "$PRODUCT_REPOSITORY" \
+            --force 2>&1)
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "$output"
+          elif [[ "$output" == *"RepositoryNotFoundException"* ]]; then
+            echo "Warning: ECR repository $PRODUCT_REPOSITORY does not exist; skipping"
+          else
+            echo "$output" >&2
+            exit "$status"
+          fi
